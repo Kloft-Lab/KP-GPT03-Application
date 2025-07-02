@@ -35,14 +35,6 @@ library(tibble)
 # retrieve parameters
 pars <- params$par_list
 
-# pars <- list(
-#   openai_key = "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",
-#   model_select = "gpt-4o",
-#   system_message = "Du bist freundlich",
-#   user_message = "Was ist die Halbwertszeit von Uran?",
-#   num_repeats = 2
-# )
-
 # show
 pars
 ```
