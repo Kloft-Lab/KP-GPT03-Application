@@ -1,0 +1,113 @@
+---
+title: "ChatGPT-gestützte Medikationsanalyse"
+author: "WPF-Team"
+date: now
+callout-appearance: minimal
+execute:
+  echo: true
+  message: true
+  warning: true
+format:
+  html:
+    toc: true
+    code-fold: true
+    code-tools: true
+    number-sections: true
+    embed-resources: true
+params:
+  par_list: NA
+---
+
+```{r}
+# get rid of workspace except params
+rm(list = ls()[!ls() %in% c("params")])
+```
+
+# Preamble
+
+
+```{r}
+# load packages
+library(ellmer)
+library(purrr)
+library(tibble)
+
+# retrieve parameters
+pars <- params$par_list
+
+# pars <- list(
+#   openai_key = "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",
+#   model_select = "gpt-4o",
+#   system_message = "Du bist freundlich",
+#   user_message = "Was ist die Halbwertszeit von Uran?",
+#   num_repeats = 2
+# )
+
+# show
+pars
+```
+
+
+# ChatGPT prompting
+
+```{r}
+# define chat agent
+chat <- chat_openai(
+  system_prompt = pars$system_message,
+  base_url = "https://api.openai.com/v1",
+  api_key = pars$openai_key,
+  model = pars$model_select
+)
+
+# define empty list
+responses <- list()
+
+# define prompts (repeated n times)
+prompts <- pars$user_message |> rep(pars$num_repeats) |> as.list()
+
+# loop over prompt n times
+out <- parallel_chat(chat, prompts)
+```
+
+
+```{r}
+#| output: asis
+
+# and in a loop over your `out` list:
+for (i in seq_along(out)) {
+  turn <- out[[i]]$last_turn(role = "assistant")
+  # alle ContentText-Objekte durchgehen und @text extrahieren
+  response <- vapply(turn@contents, function(ct) ct@text, character(1))
+  cat("\n\n")
+  cat(paste0("\n\n## Response ", i, "\n\n "))
+  cat(paste0(response, "\n\n"))
+}
+```
+
+```{r}
+# construct csv
+results_df <- imap_dfr(out, ~ {
+  # Antwort-Text aus allen Content-Objekten extrahieren
+  turn     <- .x$last_turn(role = "assistant")
+  resp_txt <- turn@contents %>%
+               map_chr(~ .x@text) %>%
+               paste(collapse = " ")
+  
+  # Pro Row einen tibble mit allen params und dem Response-Text
+  tibble(
+    repetition     = .y,
+    model_select   = pars$model_select,
+    system_message = pars$system_message,
+    user_message   = pars$user_message,
+    response       = resp_txt
+  )
+})
+
+# Schreibe CSV
+write.csv(results_df, "chat_responses.csv", row.names = FALSE)
+```
+
+
+
+
+
