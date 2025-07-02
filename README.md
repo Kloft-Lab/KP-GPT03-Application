@@ -1,2 +1,2 @@
 # KP-GPT03
-A repo for the elective course student project in summer 2025
+A public repo for the elective course student project in summer 2025
